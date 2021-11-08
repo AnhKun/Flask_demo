@@ -1,5 +1,6 @@
 from flask import Flask, render_template, g, request
 import sqlite3
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -18,16 +19,82 @@ def close_db(error):
     if hasattr(g, 'sqlite_db'):
         g.sqlite_db.close()
 
-@app.route('/')
+@app.route('/', methods=['POST', 'GET'])
 def index():
-    return render_template('home.html')
+    db = get_db()
+    if request.method == 'POST':
+        date = request.form['date']
 
-@app.route('/view')
-def view():
-    return render_template('day.html')
+        dt = datetime.strptime(date, '%Y-%m-%d')
+        database_date = datetime.strftime(dt, '%Y%m%d')
+
+        db.execute('insert into log_date (entry_date) values (?)', [database_date])
+        db.commit()
+
+    cur = db.execute('select log_date.entry_date, sum(food.protein) as protein, sum(food.carbohydrates) as carbohydrates, sum(food.fat) as fat, sum(food.calories) as calories \
+                      from log_date \
+                      join food_date on food_date.log_date_id = log_date.id \
+                      join food on food.id = food_date.food_id \
+                      group by log_date.id order by log_date.entry_date desc')
+    results = cur.fetchall()
+
+    date_result = []
+
+    for i in results:
+        single_date = {}
+
+        single_date['entry_date'] = i['entry_date']
+        single_date['protein'] = i['protein']
+        single_date['carbohydrates'] = i['carbohydrates']
+        single_date['fat'] = i['fat']
+        single_date['calories'] = i['calories']
+
+        d = datetime.strptime(str(i['entry_date']), '%Y%m%d')
+        single_date['pretty_date'] = datetime.strftime(d, '%B %d, %Y')
+
+        date_result.append(single_date)
+
+    return render_template('home.html', results = date_result)
+
+@app.route('/view/<date>', methods=['GET', 'POST'])  # date is going to be 20211108
+def view(date):
+    db = get_db()
+
+    cur = db.execute('select id, entry_date from log_date where entry_date = ?', [date])
+    date_result = cur.fetchone()
+
+    if request.method == 'POST':
+        db.execute('insert into food_date (food_id, log_date_id) values (?, ?)', [request.form['food-select'], date_result['id']])
+        db.commit()
+
+
+    d = datetime.strptime(str(date_result['entry_date']), '%Y%m%d')
+    pretty_date = datetime.strftime(d, '%B %d, %Y')
+
+    food_cur = db.execute('select id, name from food')
+    food_results = food_cur.fetchall()
+
+    log_cur = db.execute('select food.name, food.protein, food.carbohydrates, food.fat, food.calories \
+                          from log_date \
+                          join food_date on food_date.log_date_id = log_date.id \
+                          join food on food.id = food_date.food_id \
+                          where log_date.entry_date = ?', [date])
+    log_results = log_cur.fetchall()
+
+    total = {'protein': 0, 'carbohydrates': 0, 'fat': 0, 'calories': 0}
+
+    for food in log_results:
+        total['protein'] += food['protein']
+        total['carbohydrates'] += food['carbohydrates']
+        total['fat'] += food['fat']
+        total['calories'] += food['calories']
+
+    return render_template('day.html', pretty_date=pretty_date, food_results=food_results, log_results=log_results, total=total, entry_date=date_result['entry_date'])
 
 @app.route('/food', methods=['GET', 'POST'])
 def food():
+    db = get_db()
+
     if request.method == 'POST':
         name = request.form['food-name']
         protein = int(request.form['protein'])
@@ -36,12 +103,14 @@ def food():
 
         calories = protein * 4 + carbohydrates * 4 + fat * 9
 
-        db = get_db()
         db.execute('insert into food (name, protein, carbohydrates, fat, calories) values (?, ?, ?, ?, ?)', \
                    [name, protein, carbohydrates, fat, calories])
         db.commit()
 
-    return render_template('add_food.html')
+    cur = db.execute('select name, protein, carbohydrates, fat, calories from food')
+    result = cur.fetchall()
+
+    return render_template('add_food.html', results=result)
 
 if __name__ == '__main__':
     app.run(debug=True)
