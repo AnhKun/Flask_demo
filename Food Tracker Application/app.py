@@ -1,18 +1,8 @@
 from flask import Flask, render_template, g, request
-import sqlite3
 from datetime import datetime
+from database import connect_db, get_db
 
 app = Flask(__name__)
-
-def connect_db():
-    sql = sqlite3.connect('food_log.db')
-    sql.row_factory = sqlite3.Row
-    return sql
-
-def get_db():
-    if not hasattr(g, 'sqlite_db'):
-        g.sqlite_db = connect_db()
-    return g.sqlite_db
 
 @app.teardown_appcontext
 def close_db(error):
@@ -31,11 +21,11 @@ def index():
         db.execute('insert into log_date (entry_date) values (?)', [database_date])
         db.commit()
 
-    cur = db.execute('select log_date.entry_date, sum(food.protein) as protein, sum(food.carbohydrates) as carbohydrates, sum(food.fat) as fat, sum(food.calories) as calories \
-                      from log_date \
-                      join food_date on food_date.log_date_id = log_date.id \
-                      join food on food.id = food_date.food_id \
-                      group by log_date.id order by log_date.entry_date desc')
+    cur = db.execute("""select log_date.entry_date, sum(food.protein) as protein, sum(food.carbohydrates) as carbohydrates, sum(food.fat) as fat, sum(food.calories) as calories 
+                      from log_date 
+                      join food_date on food_date.log_date_id = log_date.id 
+                      join food on food.id = food_date.food_id 
+                      group by log_date.id order by log_date.entry_date desc""")
     results = cur.fetchall()
 
     date_result = []
@@ -74,11 +64,11 @@ def view(date):
     food_cur = db.execute('select id, name from food')
     food_results = food_cur.fetchall()
 
-    log_cur = db.execute('select food.name, food.protein, food.carbohydrates, food.fat, food.calories \
-                          from log_date \
-                          join food_date on food_date.log_date_id = log_date.id \
-                          join food on food.id = food_date.food_id \
-                          where log_date.entry_date = ?', [date])
+    log_cur = db.execute("""select food.name, food.protein, food.carbohydrates, food.fat, food.calories 
+                          from log_date 
+                          join food_date on food_date.log_date_id = log_date.id 
+                          join food on food.id = food_date.food_id 
+                          where log_date.entry_date = ?""", [date])
     log_results = log_cur.fetchall()
 
     total = {'protein': 0, 'carbohydrates': 0, 'fat': 0, 'calories': 0}
@@ -89,7 +79,8 @@ def view(date):
         total['fat'] += food['fat']
         total['calories'] += food['calories']
 
-    return render_template('day.html', pretty_date=pretty_date, food_results=food_results, log_results=log_results, total=total, entry_date=date_result['entry_date'])
+    return render_template('day.html', pretty_date=pretty_date, food_results=food_results,\
+                           log_results=log_results, total=total, entry_date=date_result['entry_date'])
 
 @app.route('/food', methods=['GET', 'POST'])
 def food():
