@@ -12,19 +12,37 @@ def create_app():
     app.config['MAIL_USE_TLS'] = False
     app.config['MAIL_USE_SSL'] = True
     app.config['MAIL_DEFAULT_SENDER'] = '****@yahoo.com'
+    app.config['MAIL_MAX_EMAILS'] = 5
 
     mail = Mail()
     mail.init_app(app)
 
     @app.route('/')
     def index():
-        msg = Message('Hello From Flask', recipients=['****@gmail.com'])
+        msg = Message(
+            'Flask Cheatsheet',
+            sender = ('Anh', '****@yahoo.com'),
+            recipients=['****@gmail.com']
+        )
+        #msg.body = 'This is plaintext in the messsage!'
+        msg.html = '<b>Please see attached!</b>'
 
-        s = smtplib.SMTP_SSL('smtp.mail.yahoo.com')
-        s.login('****@yahoo.com', '****')
+        with app.open_resource('flask_cheatsheet.pdf') as pdf:
+            msg.attach('flask_cheatsheet.pdf', 'application/pdf', pdf.read())
 
         mail.send(msg)
 
         return '<h1>Sent</h1>'
+
+    @app.route('/bulk')
+    def bulk():
+        users = [{'name' : 'Anh', 'email' : 'anh@gmail.com'},
+                 {'name' : 'Nguyen', 'email' : 'nguyen@gmail.com'}]
+
+        with mail.connect() as conn:
+            for user in users:
+                msg = Message('Bulk', recipients=[user['email']])
+                msg.body = f'Hey {user["name"]}'
+                conn.send(msg)
 
     return app
