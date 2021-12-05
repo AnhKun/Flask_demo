@@ -1,22 +1,26 @@
 import os
-from flask import Flask, render_template
+from datetime import date
+from flask import Flask, render_template, url_for, redirect, flash, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField
+from wtforms import StringField, PasswordField, SubmitField, BooleanField
 from wtforms.validators import InputRequired, Length
 from flask_wtf.file import FileField, FileAllowed
 from flask_bootstrap import Bootstrap
 from flask_uploads import UploadSet, configure_uploads, IMAGES
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 
 db = SQLAlchemy()
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
-    username = db.Column(db.String(30))
-    password = db.Column(db.String(50))
+    username = db.Column(db.String(30), unique=True, nullable=False)
+    password = db.Column(db.String(50), nullable=False)
     image = db.Column(db.String(100))
+    join_date = db.Column(db.DateTime)
 
 class RegisterForm(FlaskForm):
     name = StringField("Full name", validators=[
@@ -36,6 +40,18 @@ class RegisterForm(FlaskForm):
     ])
     submit = SubmitField()
 
+class LoginForm(FlaskForm):
+    username = StringField("Username", validators=[
+        InputRequired("Username is required"),
+        Length(max=30, message="Your username cannot be more than 30 characters")
+    ])
+    password = PasswordField("Password", validators=[
+        InputRequired("Password is required"),
+        Length(max=50, message="Your password cannot be more than 50 characters")
+    ])
+    remember = BooleanField('Remember Me')
+    submit = SubmitField()
+
 def create_app():
     app = Flask(__name__)
 
@@ -52,13 +68,47 @@ def create_app():
     bootstrap = Bootstrap(app)
     configure_uploads(app, photos)
 
+    login_manager = LoginManager(app)
+    login_manager.login_view = 'login'
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
+
     @app.route('/')
     def index():
-        return render_template('index.html')
+        form=LoginForm()
+        return render_template('index.html', form=form)
+
+    @app.route('/login', methods=['POST', 'GET'])
+    def login():
+        if request.method=='GET':
+            return redirect(url_for('index'))
+
+        form = LoginForm()
+        if form.validate_on_submit():
+            user = User.query.filter_by(username=form.username.data).first()
+            if user:
+                if check_password_hash(user.password, form.password.data):
+                    login_user(user, remember=form.remember.data)
+                    return redirect(url_for('profile'))
+                flash('Login failed')
+                
+            else:
+                flash('Login failed')
+
+        return redirect(url_for('index'))
+
+    @app.route('/logout')
+    @login_required
+    def logout():
+        logout_user()
+        return redirect(url_for('index'))
 
     @app.route('/profile')
+    @login_required
     def profile():
-        return render_template('profile.html')
+        return render_template('profile.html', current_user=current_user)
 
     @app.route('/timeline')
     def timeline():
@@ -68,9 +118,17 @@ def create_app():
     def register():
         form = RegisterForm()
         if form.validate_on_submit():
-            filename = photos.save(form.image.data)
-            image_url = photos.url(filename)
-            return '<h1>{}</h1>'.format(image_url)
+            file_url = None
+            if form.image.data:
+                filename = photos.save(form.image.data)
+                file_url = photos.path(filename)
+
+            new_user = User(name=form.name.data, username=form.username.data, image=file_url, 
+                password=generate_password_hash(form.password.data), join_date=date.today())
+            db.session.add(new_user)
+            db.session.commit()
+
+            return redirect(url_for('profile'))
         return render_template('register.html', form=form)
 
     return app
