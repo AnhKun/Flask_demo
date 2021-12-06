@@ -10,9 +10,13 @@
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='bs/css/united.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
+    {{ moment.include_moment() }}
+
 </head>
 
 <body>
+
 
     <div class="container-fluid">
         <div class="row" id="banner">
@@ -25,6 +29,14 @@
         </div>
     </div>
     {% block navbar %}{% endblock %}
+
+    {% for message in get_flashed_messages() %}
+	<div class="alert alert-warning">
+		<button type="button" class="close" data-dismiss="alert">&times;</button>
+		{{ message }}
+	</div>
+    {% endfor %}
+
     <div class="container">
         {% block content %}{% endblock %}
         <footer>
@@ -42,6 +54,7 @@
     <script src="{{ url_for('static', filename='bs/js/jquery.min.js') }}"></script>
     <!-- Bootstrap JavaScript -->
     <script src="{{ url_for('static', filename='bs/js/bootstrap.min.js') }}"></script>
+
 </body>
 
 </html>
