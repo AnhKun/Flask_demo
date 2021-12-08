@@ -9,7 +9,7 @@ from forms import RegisterForm, LoginForm, TweetForm
 @app.route('/')
 def index():
     form=LoginForm()
-    return render_template('index.html', form=form)
+    return render_template('index.html', form=form, logged_in_user=current_user)
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
@@ -55,7 +55,10 @@ def profile(username):
     elif current_user in followed_by:
         display_follow = False
 
-    return render_template('profile.html', current_user=user, tweets=tweets, followed_by=followed_by, display_follow=display_follow)
+    who_to_watch = User.query.filter(User.id != user.id).order_by(db.func.random()).limit(4).all()
+
+    return render_template('profile.html', current_user=user, tweets=tweets, followed_by=followed_by,
+        display_follow=display_follow, who_to_watch=who_to_watch, logged_in_user=current_user)
 
 @app.route('/timeline', defaults={'username':None})
 @app.route('/timeline/<username>')
@@ -66,15 +69,20 @@ def timeline(username):
         user = User.query.filter_by(username=username).first()
         if not user:
             abort(404)
+        tweets = Tweet.query.filter_by(user=user).order_by(Tweet.date_created.desc()).all()
+        total_tweets = len(tweets)
 
     else:
         user = current_user
+        tweets = Tweet.query.join(followers, (followers.c.followee_id == Tweet.user_id)).filter(followers.c.follower_id == current_user.id).order_by(Tweet.date_created.desc()).all()
+        total_tweets = Tweet.query.filter_by(user=user).order_by(Tweet.date_created.desc()).count()
+    
+    followed_by_count = user.followed_by.count()
 
-    #tweets = Tweet.query.filter_by(user=user).order_by(Tweet.date_created.desc()).all()
-    total_tweets = len(tweets)
+    who_to_watch = User.query.filter(User.id != user.id).order_by(db.func.random()).limit(4).all()
 
-    return render_template('timeline.html', form=form, tweets=tweets, current_user=user,
-        total_tweets=total_tweets)
+    return render_template('timeline.html', form=form, tweets=tweets, current_user=user, total_tweets=total_tweets,
+        who_to_watch=who_to_watch, logged_in_user=current_user, followed_by_count=followed_by_count)
 
 @app.route('/post_tweet', methods=["POST"])
 @login_required

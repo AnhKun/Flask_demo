@@ -1,31 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Timeline | Eng@ge!{% endblock %}
 
-{% block navbar %}
-<nav class="navbar navbar-default" role="navigation">
-	<div class="container-fluid">
-		<!-- Brand and toggle get grouped for better mobile display -->
-		<div class="navbar-header">
-			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
-				<span class="sr-only">Toggle navigation</span>
-				<span class="icon-bar"></span>
-				<span class="icon-bar"></span>
-				<span class="icon-bar"></span>
-			</button>
-			<a class="navbar-brand" href="./">Eng@ge!</a>
-		</div>
+{% block timeline_active %}active{% endblock %}
 
-		<!-- Collect the nav links, forms, and other content for toggling -->
-		<div class="collapse navbar-collapse navbar-ex1-collapse">
-			<ul class="nav navbar-nav navbar-right">
-				<li class="active"><a href="{{ url_for('timeline') }}">Timeline</a></li>
-				<li class=""><a href="{{ url_for('profile') }}">My Profile</a></li>
-				<li class=""><a href="{{ url_for('logout')}}">Logout</a></li>
-			</ul>
-		</div><!-- /.navbar-collapse -->
-	</div>
-</nav>
-{% endblock %}
 {% block content %}
 <div class="row">
 	<div class="col-lg-12">
@@ -51,7 +28,7 @@
 					<div class="col-lg-4 text-center">
 						<strong>
 							Followers <br />
-							300
+							{{ followed_by_count }}
 						</strong>
 					</div>
 				</div>
@@ -79,7 +56,7 @@
 										<img src="{{ url_for('static', filename='imgs/anonymous.png') }}"
 											style="width: 30px; height: 30px;" class="img-circle">
 										<strong>{{ tweet.user.name }}</strong>
-										<small><em>@{{ tweet.user.username }}</em></small>
+										<small><em><a href="{{ url_for('profile', username=tweet.user.username) }}">@{{ tweet.user.username }}</a></em></small>
 									</div>
 									<div class="col-lg-2 text-right">
 										{{ moment(tweet.date_created).fromNow(refresh=True) }}
@@ -105,42 +82,19 @@
 							<h3>Who To Watch</h3>
 						</div>
 						<ul class="list-group">
-							<li class="list-group-item">
-								The English Premier League
-								<div>
-									<strong>@theEPL</strong>
-									<span class="pull-right">
-										3,949,335 Followers
-									</span>
-								</div>
-							</li>
-							<li class="list-group-item">
-								Barclays Bank
-								<div>
-									<strong>@barclarysBank</strong>
-									<span class="pull-right">
-										3,451 Followers
-									</span>
-								</div>
-							</li>
-							<li class="list-group-item">
-								Leonardo Rumlow
-								<div>
-									<strong>@rummYLEO</strong>
-									<span class="pull-right">
-										350 Followers
-									</span>
-								</div>
-							</li>
-							<li class="list-group-item">
-								The Cable People
-								<div>
-									<strong>@theCablePeeps</strong>
-									<span class="pull-right">
-										19,004 Followers
-									</span>
-								</div>
-							</li>
+
+							{% for person in who_to_watch %}
+								<li class="list-group-item">
+									{{ person.name }}
+									<div>
+										<strong><a href="{{ url_for('profile', username=person.username) }}">@{{ person.username }}</a></strong>
+										<span class="pull-right">
+											{{ person.followed_by.all()|length }} Followers
+										</span>
+									</div>
+								</li>
+							{% endfor %}
+
 						</ul>
 					</div>
 				</div>
