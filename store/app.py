@@ -81,10 +81,38 @@ def add_to_cart():
 
     return redirect(url_for('index'))
 
+@app.route('/remove-from_cart/<index>')
+def remove_from_cart(index):
+    del session['cart'][int(index)]
+    session.modified = True
+    return redirect(url_for('cart'))
+
 @app.route('/cart')
 def cart():
-    print(session['cart'])
-    return render_template('cart.html')
+    products = []
+    form = AddToCart()
+
+    grand_total = 0
+    index = 0
+    for item in session['cart']:
+        product = Product.query.filter(Product.id==item['product_id']).first()
+        quantity = int(item['quantity'])
+        total = product.price * quantity
+
+        grand_total += total
+
+        products.append({
+            'id' : product.id,
+            'index' : index,
+            'name' : product.name,
+            'price' : product.price,
+            'image' : product.image,
+            'quantity' : quantity,
+            'total' : total
+        })
+        index += 1
+
+    return render_template('cart.html', products=products, form=form, grand_total=grand_total)
 
 @app.route('/checkout')
 def checkout():
