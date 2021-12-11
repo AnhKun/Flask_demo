@@ -7,7 +7,7 @@ class Product(db.Model):
     stock = db.Column(db.Integer)
     description = db.Column(db.String(500))
     image = db.Column(db.String(100))
-    item_id = db.relationship('Order_Item', backref='product', lazy='dynamic')
+    orders = db.relationship('Order_Item', backref='product', lazy='dynamic')
 
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -22,7 +22,13 @@ class Order(db.Model):
     country = db.Column(db.String(20))
     status = db.Column(db.String(10))
     payment_type = db.Column(db.String(20))
-    items = db.relationship('Order_Item', backref='order', lazy=True)
+    items = db.relationship('Order_Item', backref='order', lazy='dynamic')
+
+    def order_total(self):
+        return db.session.query(db.func.sum(Order_Item.quantity * Product.price)).join(Product).filter(Order_Item.order_id==self.id).scalar()
+
+    def quantity_total(self):
+        return db.session.query(db.func.sum(Order_Item.quantity)).filter(Order_Item.order_id==self.id).scalar()
 
 class Order_Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)

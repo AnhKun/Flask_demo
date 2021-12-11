@@ -79,8 +79,8 @@ def cart():
 def checkout():
     form = Checkout()
 
+    products, grand_total = handle_cart()
     if form.validate_on_submit():
-        products, grand_total = handle_cart()
 
         order = Order()
         form.populate_obj(order)
@@ -98,14 +98,16 @@ def checkout():
         session.modified = True
         return redirect(url_for('index'))
 
-    return render_template('checkout.html', form=form)
+    return render_template('checkout.html', form=form, products=products, grand_total=grand_total)
 
 @app.route('/admin')
 def admin():
     products = Product.query.all()
     products_in_stock = Product.query.filter(Product.stock > 0).count()
 
-    return render_template('admin/index.html', admin=True, products=products, products_in_stock=products_in_stock)
+    orders = Order.query.all()
+
+    return render_template('admin/index.html', admin=True, products=products, products_in_stock=products_in_stock, orders=orders)
 
 @app.route('/admin/add', methods=['GET', 'POST'])
 def add():
@@ -126,6 +128,7 @@ def add():
         return redirect(url_for('add'))
     return render_template('admin/add-product.html', admin=True, form=form)
 
-@app.route('/admin/order')
-def order():
-    return render_template('admin/view-order.html', admin=True)
+@app.route('/admin/order/<order_id>')
+def order(order_id):
+    order = Order.query.filter(Order.id == int(order_id)).first()
+    return render_template('admin/view-order.html', admin=True, order=order)

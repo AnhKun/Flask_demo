@@ -7,9 +7,9 @@
 	<div class="col-lg-12">
 		<div class="panel panel-default">
 			<div class="panel-body">
-				<h3 class="bold">ORDER ERT3343 FROM Daniel Monroe</h3>
-				<p>Products: 2 (&dollar;50.99)</p>
-				<p>Status: <span class="badge">Pending</span></p>
+				<h3 class="bold">ORDER {{ order.reference }} FROM {{ order.first_name + ' ' + order.last_name}}</h3>
+				<p>Products: {{ order.quantity_total() }} (&dollar;{{ order.order_total()/100 + 10 }})</p>
+				<p>Status: <span class="badge">{{ order.status }}</span></p>
 			</div>
 		</div>
 	</div>
@@ -29,25 +29,27 @@
 						</tr>
 					</thead>
 					<tbody>
+						{% for item in order.items %}
 						<tr>
-							<td>1</td>
-							<td>Classic Blouse</td>
-							<td>&dollar;35.99</td>
-							<td>1</td>
-							<th>&dollar;35.99</th>
+							<td>{{ item.product_id }}</td>
+							<td>{{ item.product.name }}</td>
+							<td>&dollar;{{ item.product.price / 100 }}</td>
+							<td>{{ item.quantity }}</td>
+							<th>&dollar;{{ item.quantity * item.product.price / 100 }}</th>
 						</tr>
+						{% endfor %}
 						<tr>
-							<td>2</td>
-							<td>Printed Dress</td>
-							<td>&dollar;23.99</td>
-							<td>1</td>
-							<th>&dollar;23.99</th>
+							<td>*</td>
+							<td>Flat Rate Shipping</td>
+							<td>&dollar;10</td>
+							<td></td>
+							<th>&dollar;10</th>
 						</tr>
 					</tbody>
 					<tfoot>
 						<tr>
 							<th colspan="4" class="text-right">Total</th>
-							<th>59.98</th>
+							<th>{{ order.order_total()/100 + 10 }}</th>
 						</tr>
 					</tfoot>
 				</table>
@@ -71,12 +73,13 @@
 			<div class="tab-content">
 				<div role="tabpanel" class="tab-pane active" id="shipping">
 					<h4 class="bold">Shipping Information</h4>
-					<p><i class="glyphicon glyphicon-user"></i> NAME: <strong>Daniel Monroe</strong></p>
+					<p><i class="glyphicon glyphicon-user"></i> NAME: <strong>{{ order.first_name + ' ' + order.last_name}}</strong></p>
 					<p><i class="glyphicon glyphicon-map-marker"></i> ADDRESS: 
-						<strong>Cool breeze Avenue</strong>
+						<strong>{{ order.address }}</strong>
 					</p>
-					<p><i class="glyphicon glyphicon-th"></i> State: <strong>Washington</strong></p>
-					<p><i class="glyphicon glyphicon-flag"></i> Country: <strong>United States</strong></p>
+					<p><i class="glyphicon glyphicon-th"></i> City: <strong>{{ order.city }}</strong></p>
+					<p><i class="glyphicon glyphicon-th"></i> State: <strong>{{ order.state }}</strong></p>
+					<p><i class="glyphicon glyphicon-flag"></i> Country: <strong>{{ order.country }}</strong></p>
 					<hr />
 					<p>
 						<i class="glyphicon glyphicon-gift"></i> 
@@ -85,16 +88,16 @@
 					<hr />
 					<p>
 						<i class="glyphicon glyphicon-piggy-bank"></i> 
-						Payment Type: <strong>Wire Transfer</strong>
+						Payment Type: <strong>{{ order.payment_type }}</strong>
 					</p>
 				</div>
 				<div role="tabpanel" class="tab-pane" id="details">
 					<h4 class="bold">Personal Details Provided</h4>
-					<p><i class="glyphicon glyphicon-user"></i> NAME: <strong>Daniel Monroe</strong></p>
-					<p><i class="glyphicon glyphicon-phone-alt"></i> PHONE: <strong>12569875588</strong></p>
+					<p><i class="glyphicon glyphicon-user"></i> NAME: <strong>{{ order.first_name + ' ' + order.last_name}}</strong></p>
+					<p><i class="glyphicon glyphicon-phone-alt"></i> PHONE: <strong>{{ order.phone_number }}</strong></p>
 					<p>
 						<i class="glyphicon glyphicon-envelope"></i> EMAIL: 
-						<strong>dmonroex@gmail.com</strong>
+						<strong>{{ order.email }}</strong>
 					</p>
 				</div>
 			</div>
