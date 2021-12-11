@@ -91,6 +91,8 @@ def checkout():
             order_item = Order_Item(quantity=product['quantity'], product_id=product['id'])
             order.items.append(order_item)
 
+            product = Product.query.filter_by(id=product['id']).update({'stock' : Product.stock - product['quantity']})
+
         db.session.add(order)
         db.session.commit()
 
